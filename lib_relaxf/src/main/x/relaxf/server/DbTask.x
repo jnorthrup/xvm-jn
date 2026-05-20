@@ -1,0 +1,3 @@
+annotation DbTask {
+    DbTerminal[] value();
+}
