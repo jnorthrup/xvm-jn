@@ -72,6 +72,15 @@ c = re.sub(r'^import\s+(static\s+)?[\w.*]+\s*;\s*\n', '', c, flags=re.MULTILINE)
 c = re.sub(r'\b(private|protected)\s+', '', c)
 c = re.sub(r'\bfinal\s+', '', c)
 c = re.sub(r'\s*throws\s+[\w\s,]+(?=\s*[\{;])', '', c)
+c = re.sub(r'\bsynchronized\s+', '', c)
+c = re.sub(r'\bnative\s+', '', c)
+c = re.sub(r'\btransient\s+', '', c)
+c = re.sub(r'\bvolatile\s+', '', c)
+c = re.sub(r'\bstrictfp\s+', '', c)
+c = re.sub(r'@SuppressWarnings\s*\([^)]*\)\s*\n', '', c)
+# assert x [: msg] -> assert:test x [as msg]
+c = re.sub(r'assert\s+(.+?)\s*:\s*(.+?);', r'assert:test \1 as \2;', c)
+c = re.sub(r'assert\s+(.+?);', r'assert:test \1;', c)
 
 # === XLang type mapping ===
 c = re.sub(r'\bnull\b', 'Null', c)
@@ -91,12 +100,14 @@ c = re.sub(r'([\w][\w.()]*)\s+instanceof\s+([\w.<>,\s\[\]]+)', r'\1.is(\2)', c)
 
 # 2. C-cast (Type) expr -> expr.as(Type)
 # Pass A: ((Type) expr).method()  -> expr.as(Type).method()
-c = re.sub(r'\(\(([A-Z][\w.]+)\)\s*([\w].*?)\)\.', r'\2.as(\1).', c)
-# Pass B: standalone cast (Type) expr  where expr is identifier/method-call
-c = re.sub(r'\(([A-Z][\w.]+)\)\s+([\w]+[\w.]*(?:\([^)]*\)[\w.]*)*)', r'\2.as(\1)', c)
+c = re.sub(r'\(\(([A-Z][\w.<>,\s\[\]]+)\)\s*([\w].*?)\)\.', r'\2.as(\1).', c)
+# Pass B: standalone cast (Type) expr  where expr is identifier/method-call/field
+c = re.sub(r'\(([A-Z][\w.<>,\s\[\]]+)\)\s+([\w]+[\w.()]*(?:\[[^\]]*\])*)', r'\2.as(\1)', c)
 
 # 3. Array init {a, b} -> [a, b]
 c = re.sub(r'(=\s*)\{([^}]+)\}', r'\1[\2]', c)
+# new Type[] {a, b} -> new Type[] [a, b]
+c = re.sub(r'new\s+([\w.\[\]]+)\[\]\s*\{([^}]+)\}', r'[\2]', c)
 
 # 4. Remove generic wildcards — loop for nested cases like <<? extends>>
 for _ in range(10):
@@ -107,8 +118,9 @@ for _ in range(10):
 c = re.sub(r'<>', '', c)
 
 # 6. Constructor: public Name(params) { -> construct(params) {
-c = re.sub(r'^\s*(public\s+)?([A-Z]\w*(?:<[^>]+>)?)\s*\(([^)]*)\)\s*\{',
-           r'    construct(\3) {', c, flags=re.MULTILINE)
+# Match: [public] ClassName(params) {  — NOT followed by comma/semicolon (those are enum values)
+c = re.sub(r'^\s*(public\s+)?([A-Z]\w*(?:<[^>]+>)?)\s*\(([^)]*)\)\s*\{(\s*)$',
+           r'    construct(\3) {\4', c, flags=re.MULTILINE)
 
 # 7. static {} -> static construct() {}
 c = re.sub(r'\bstatic\s*\{', 'static construct() {', c)
