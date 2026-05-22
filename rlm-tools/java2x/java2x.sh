@@ -9,12 +9,13 @@ set -euo pipefail
 ME=$(basename "$0")
 usage() { echo "Usage: $ME [--module NAME] [--lib PATH] <src-dir> [out-dir]"; exit 1; }
 
-MODNAME=""; LIBS=""; VERBOSE=false
+MODNAME=""; LIBS=""; VERBOSE=false; NO_BUILD=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --module) MODNAME="$2"; shift 2 ;;
         --lib)    LIBS="$LIBS -L $2"; shift 2 ;;
         -v)       VERBOSE=true; shift ;;
+        --no-build) NO_BUILD=true; shift ;;
         -h) usage ;; *) break ;;
     esac
 done
@@ -147,11 +148,15 @@ XEOF
 $VERBOSE && echo "Module: $OUT_DIR/$MODFILE"
 $VERBOSE && echo "Sources: $OUT_DIR/$TOP_PKG/ (${#JAVA_FILES[@]} files)"
 
-# Build
-XTC="${XTC:-xtc}"
-XDK_LIB="/opt/homebrew/Cellar/xdk-latest/0.4.4-SNAPSHOT.20260318082314/libexec/lib"
-JT="$XDK_LIB/../javatools"
-echo ""
-echo "=== xtc build $MODFILE ==="
-(cd "$OUT_DIR" && $XTC build "$MODFILE" -L "$XDK_LIB" -L "$JT/javatools_turtle.xtc" -L "$JT/javatools_bridge.xtc" $LIBS 2>&1) && \
-    echo "✓ ${MODNAME}.xtclang.org builds clean" || { echo "RLM: fix errors and rebuild"; exit 1; }
+# Build (skip with --no-build for RLM loop)
+if [[ "$NO_BUILD" == "false" ]]; then
+    XTC="${XTC:-xtc}"
+    XDK_LIB="/opt/homebrew/Cellar/xdk-latest/0.4.4-SNAPSHOT.20260318082314/libexec/lib"
+    JT="$XDK_LIB/../javatools"
+    echo ""
+    echo "=== xtc build $MODFILE ==="
+    (cd "$OUT_DIR" && $XTC build "$MODFILE" -L "$XDK_LIB" -L "$JT/javatools_turtle.xtc" -L "$JT/javatools_bridge.xtc" $LIBS 2>&1) && \
+        echo "✓ ${MODNAME}.xtclang.org builds clean" || { echo "RLM: fix errors and rebuild"; exit 1; }
+else
+    echo "=== convert done (--no-build) ==="
+fi
