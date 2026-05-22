@@ -49,14 +49,26 @@ The converter handles syntax (instanceof→.is, (T)x→x.as(T), static{}→const
 But the output still has JDBC/HttURLConnection/Gson patterns that must be
 replaced with relaxf-ref CouchDriver fluent API.
 
-### Audit checklist after convert
+## jdbc2json RLM audit (2026-05-21)
 
-Check output for these Java patterns that need replacing:
-- `HttpURLConnection` → use `rxf.server.CouchDriver` builders
-- `GSON.toJson` / `Gson` → use `CouchDriver.JsonSend.validjson()`
-- `ResultSet` → use `rxf.server.CouchDriver.ViewFetch`
-- `DriverManager.getDriver` → use `CouchDriver.DbCreate`
-- `connection.createStatement().executeQuery` → use `ViewFetch.$.db().view().to().fire()`
+Converted output has these Java patterns that RLM doesn't handle:
+
+```
+/tmp/port/jdbc2json/server/BatchBuild.x:10: public static GsonBuilder BUILDER
+/tmp/port/jdbc2json/server/BatchBuild.x:12: public static Gson GSON = BUILDER.create()
+/tmp/port/jdbc2json/server/BatchBuild.x:37: DRIVER = DriverManager.getDriver(jdbcUrl)
+/tmp/port/jdbc2json/server/BatchBuild.x:43: ResultSetMetaData metaData1
+/tmp/port/jdbc2json/server/BatchBuild.x:44: try (var resultSet = DRIVER.connect(...).createStatement().executeQuery(sql))
+/tmp/port/jdbc2json/server/BatchBuild.x:73: HttpURLConnection httpCon = url.openConnection().as(HttpURLConnection)
+```
+
+Gap identified:
+1. **Gson/GsonBuilder** → use xvm JSON (no direct replacement, different API)
+2. **HttpURLConnection PUT** → use CouchDriver.DbCreate/DocPersist/JsonSend
+3. **JDBC (ResultSet/Statement/Connection)** → JDBC does NOT port to X (user decision: keep as-is via javatools bridge or rewrite to use CouchDB views)
+
+Current status: RLM produces Java-with-X-skin. Semantic transformation needed for
+pure X output.
 
 ## RLM Loop — Full Steps
 
