@@ -62,13 +62,18 @@ Converted output has these Java patterns that RLM doesn't handle:
 /tmp/port/jdbc2json/server/BatchBuild.x:73: HttpURLConnection httpCon = url.openConnection().as(HttpURLConnection)
 ```
 
-Gap identified:
-1. **Gson/GsonBuilder** → use xvm JSON (no direct replacement, different API)
-2. **HttpURLConnection PUT** → use CouchDriver.DbCreate/DocPersist/JsonSend
-3. **JDBC (ResultSet/Statement/Connection)** → JDBC does NOT port to X (user decision: keep as-is via javatools bridge or rewrite to use CouchDB views)
+Gap identified (POST-STRATEGY FIX):
+1. **Gson/GsonBuilder** → KEEP via X context adapter (javap reflection wrapper)
+2. **HttpURLConnection PUT** → use CouchDriver.DbCreate/DocPersist/JsonSend (async NIO)
+3. **JDBC (ResultSet/Statement/Connection)** → KEEP via javatools bridge, wrap in X adapter
 
-Current status: RLM produces Java-with-X-skin. Semantic transformation needed for
-pure X output.
+**Strategy**: Non-portable Java jars wrapped in X context adapters.
+- Thunking overhead acknowledged (Java↔X boundary)
+- Developers mitigate by coarser-grained calls later
+- Shims carried as .x files calling Java via reflection
+
+Current status: RLM produces syntactic X + Java adapters. Core X logic via CouchDriver,
+data access via Java shims with known performance costs.
 
 ## RLM Loop — Full Steps
 

@@ -19,10 +19,26 @@ cd out-x && xtc build x_myproj.x 2>&1        # compile only (no auto-fix)
 
 ## What the converter produces
 
-java2x.sh is a regex pipeline that produces **Java-with-X-skin**:
+java2x.sh is a regex pipeline that produces **syntactic X**:
 - compiles with xtc (Java syntax accepted)
-- still has instanceof, C-casts, Gson, HttpURLConnection, SQLException
-- NOT pure X — needs hand-audit vs relaxf-ref
+- strips package/import, maps types (int→Int, boolean→Boolean)
+- keeps non-portable Java libs (Gson, JDBC) via javatools bridge
+
+**Post-conversion**: wrap non-portable libs in X context adapters (.x shims calling Java).
+
+## X context adapter pattern
+
+```x
+// X adapter calling Java via javatools bridge
+service GsonAdapter {
+    @Inject java.lang.reflect.Method gsonToJson;
+    static String toJson(Object obj) {
+        gsonToJson.invoke(javaGsonInstance, obj);
+    }
+}
+```
+
+Thunking overhead acknowledged (Java↔X boundary). Optimize granularity later.
 
 ## Pure X baseline (relaxf-ref)
 
