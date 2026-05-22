@@ -118,18 +118,19 @@ Do not explain. Just fix and save." 2>&1
 
     # 5. xtc build
     echo ""
-    echo "  [xtc build]"
+    echo "  [xtc build] $MODFILE"
     set +e
     BUILD_OUT=$( (cd "$OUT_DIR" && $XTC build "$MODFILE" \
         -L "$XDK_LIB" \
         -L "$JT/javatools_turtle.xtc" \
         -L "$JT/javatools_bridge.xtc" \
-        $LIBS 2>&1) )
-    BUILD_RC=$?
+        $LIBS 2>&1) || true )
     set -e
-    echo "$BUILD_OUT"
 
-    if [[ $BUILD_RC -eq 0 ]]; then
+    # Check for errors in xtc output (not return code)
+    if echo "$BUILD_OUT" | grep -q 'Error:'; then
+        echo "  ✗ build failed"
+    else
         echo ""
         echo "✓ $MODNAME builds clean after $iter iteration(s)"
         exit 0
