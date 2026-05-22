@@ -130,7 +130,44 @@ c = re.sub(r'\bstatic\s*\{', 'static construct() {', c)
 c = re.sub(r'^\s*super\s*\([^)]*\)\s*;\s*\n', '', c, flags=re.MULTILINE)
 
 # 9. Remove abstract keyword on methods (keep on classes for now)
-c = re.sub(r'\babstract\s+(void|Boolean|Int|String|Object|long|int|byte)', r'\1', c)
+c = re.sub(r'\\babstract\\s+(void|Boolean|Int|String|Object|long|int|byte)', r'\\1', c)
+
+# 10. X context adapter generation
+# Detect non-portable Java patterns, generate .x adapter wrappers
+
+# Find patterns like: new Gson(), DriverManager.getConnection()
+import_matches = re.findall(r'^import\\s+(com\\.google\\.gson\\..*|java\\.sql\\..*);', c, re.MULTILINE)
+if import_matches:
+    adapter_name = None
+    adapter_methods = []
+    
+    for imp in import_matches:
+        if 'com.google.gson' in imp:
+            adapter_name = 'GsonAdapter'
+            adapter_methods.append('''
+static String toJson(Object obj) {
+    @Inject com.google.gson.Gson gson;
+    gson.toJson(obj);
+}
+''')
+        elif 'java.sql.Connection' in imp:
+            adapter_name = 'JdbcAdapter'
+            adapter_methods.append('''
+static Connection connect(String url) {
+    java.sql.DriverManager.getConnection(url);
+}
+''')
+    
+    # Write adapter file if any patterns found
+    if adapter_name:
+        adapter_file = os.path.join(os.path.dirname('$xfile'), f'{adapter_name}.x')
+        with open(adapter_file, 'w') as f:
+            f.write(f'service {adapter_name} {{\\n')
+            f.write('  // Auto-generated X context adapter\\n')
+            f.write('  // Wraps Java APIs via javatools bridge\\n')
+            for m in adapter_methods:
+                f.write(f'  {m}\\n')
+            f.write('}')
 
 # === Cleanup ===
 c = re.sub(r'  +', ' ', c)
