@@ -63,7 +63,8 @@ val coreBuilds = listOf(
     "javatools_unicode",
     "plugin",
     "xdk",
-    "docker"
+    "docker",
+    "lib_jdbc2json"
 )
 
 coreBuilds.forEach(::includeBuild)
