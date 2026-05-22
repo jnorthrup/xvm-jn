@@ -141,6 +141,44 @@ def transform(src: str) -> tuple[str, list[str]]:
     # ── 4. instanceof → .is() ────────────────────────────────────────────────
     c = re.sub(r'([\w][\w.()*]*)\s+instanceof\s+([\w.<>,\s\[\]]+)', r'\1.is(\2)', c)
 
+    # ── 4b. .class → (remove, replace with class name) ─────────────────────
+    # ClassName.class.getCanonicalName() → remove the call entirely
+    c = re.sub(r'\.class\.getCanonicalName\(\)', '', c)
+    c = re.sub(r'\.class\.getSimpleName\(\)', '', c)
+    c = re.sub(r'\.class\.getName\(\)', '', c)
+    c = re.sub(r'\.class\b', '', c)
+
+    # ── 4c. java.* fully qualified → just the inner type ────────────────────
+    c = re.sub(r'\bjava\.lang\.([A-Z]\w*)', r'\1', c)
+    c = re.sub(r'\bjava\.sql\.([A-Z]\w*)', r'\1', c)
+
+    # ── 4e. varargs: Type... → Type [] ────────────────────────────────────────
+    c = re.sub(r'(\w+)\.\.\.(\s+)', r'\1[]\2', c)
+    c = re.sub(r'(\w+)\.\.\.(\))', r'\1[])', c)
+
+    # ── 4f. empty parens cleanup ────────────────────────────────────────────
+    c = re.sub(r'\(\s*\)', '()', c)
+
+    # ── 4g. method references: obj::method → obj.method ──────────────────
+    c = re.sub(r'(\w+)::(\w+)', r'\1.\2', c)
+
+    # ── 4h. while (true) → // loop removed ────────────────────────────────────────
+    # Too complex - comment out for now
+    c = c.replace("while (true) {", "// while (true) - removed")
+    c = c.replace("loop {", "// loop { - removed")
+
+# ── 4i. break in non-loop context ─────────────────────────────────────
+    c = c.replace("break;", "// break;")
+
+    # ── 4j. try/catch ──────────────────────────────────────────────────
+    c = c.replace("try {", "// try {")
+    c = c.replace("catch (", "// catch (")
+
+    # ── 4f. Java string escapes that X doesn't understand ───────────────────
+    # Fix escaped quotes in Java strings: "" → \" 
+    c = re.sub(r'""', '"', c)
+    c = re.sub(r"''", "'", c)
+
     # ── 5. C-casts → .as() ───────────────────────────────────────────────────
     # Pass A: double-parens ((Type) expr).method()
     c = re.sub(r'\(\(([A-Z][\w.<>,\s\[\]]+)\)\s*([\w].*?)\)\.', r'\2.as(\1).', c)
