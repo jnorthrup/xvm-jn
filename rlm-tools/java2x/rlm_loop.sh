@@ -107,7 +107,7 @@ for ((iter=1; iter<=MAX; iter++)); do
     if [[ -n "$CONVERT_ERRORS" ]]; then
         echo ""
         echo "[RLM] java2x.py raised errors — asking hermes to fix"
-        hermes -p "You are fixing a Java→XTC transform script. The script is $JAVA2X_PY.
+        hermes chat -q "You are fixing a Java→XTC transform script. The script is $JAVA2X_PY.
 These Python errors occurred during conversion:
 $CONVERT_ERRORS
 
@@ -143,7 +143,7 @@ Do not explain. Just fix and save." 2>&1
     echo "[RLM] xtc errors — asking hermes to evolve java2x.py"
     echo "$XTC_ERRORS"
 
-    hermes -p "You are evolving a Java→XTC transform script to eliminate compiler errors.
+    hermes chat -q "You are evolving a Java→XTC transform script to eliminate compiler errors.
 Script: $JAVA2X_PY
 XTC compiler errors from latest run:
 $XTC_ERRORS
